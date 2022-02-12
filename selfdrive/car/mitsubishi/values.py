@@ -37,5 +37,3 @@ STEER_THRESHOLD = 100
 DBC = {
   CAR.OUTLANDER_GT: dbc_dict('mitsubishi_outlander_gt', None)
 }
-
-PREGLOBAL_CARS = [CAR.OUTLANDER_PREGLOBAL]
