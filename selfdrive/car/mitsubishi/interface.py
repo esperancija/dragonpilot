@@ -28,18 +28,17 @@ class CarInterface(CarInterfaceBase):
 
     stop_and_go = False
 
-    if candidate == CAR.OUTLANDER_GT:
-      ret.mass = 1800 + STD_CARGO_KG
-      ret.wheelbase = 2.68986
-      ret.centerToFront = ret.wheelbase * 0.5
-      ret.steerRatio = 14.3
-      tire_stiffness_factor = 0.7933
-      set_lat_tune(ret.lateralTuning, LatTunes.PID_D)
+    ret.mass = 1800 + STD_CARGO_KG
+    ret.wheelbase = 2.68986
+    ret.centerToFront = ret.wheelbase * 0.5
+    ret.steerRatio = 14.3
+    tire_stiffness_factor = 0.7933
+    set_lat_tune(ret.lateralTuning, LatTunes.PID_D)
 
-      ret.steerActuatorDelay = 0.1
-      ret.lateralTuning.pid.kf = 0.000039
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0., 10., 20.], [0., 10., 20.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.01, 0.05, 0.2], [0.003, 0.018, 0.025]]
+    ret.steerActuatorDelay = 0.1
+    ret.lateralTuning.pid.kf = 0.000039
+    ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0., 10., 20.], [0., 10., 20.]]
+    ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.01, 0.05, 0.2], [0.003, 0.018, 0.025]]
 
     ret.steerRateCost = 1.
 
@@ -62,21 +61,11 @@ class CarInterface(CarInterfaceBase):
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
     ret.openpilotLongitudinalControl = smartDsu or ret.enableDsu or candidate in TSS2_CAR
 
-    if 0x245 in fingerprint[0]:
-      ret.flags |= ToyotaFlags.HYBRID.value
-
     # min speed to enable ACC. if car can do stop and go, then set enabling speed
     # to a negative value, so it won't matter.
     ret.minEnableSpeed = -1. if (stop_and_go or ret.enableGasInterceptor) else MIN_ACC_SPEED
 
-    if ret.enableGasInterceptor:
-      set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
-    elif candidate in TSS2_CAR:
-      set_long_tune(ret.longitudinalTuning, LongTunes.TSS2)
-      ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
-    else:
-      set_long_tune(ret.longitudinalTuning, LongTunes.TSS)
-
+    set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
     return ret
 
   # returns a car.CarState
