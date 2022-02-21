@@ -3,6 +3,7 @@ from cereal import car
 from selfdrive.config import Conversions as CV
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.interfaces import CarInterfaceBase
+from selfdrive.car.mitsubishi.values import MIN_ACC_SPEED
 
 EventName = car.CarEvent.EventName
 
@@ -17,8 +18,8 @@ class CarInterface(CarInterfaceBase):
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
 
     ret.carName = "mitsubishi"
-    ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.toyota)]
-    ret.safetyConfigs[0].safetyParam = EPS_SCALE[candidate]
+    ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.mitsubishi)]
+    ret.safetyConfigs[0].safetyParam = 1 #EPS_SCALE[candidate]
 
     ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4
@@ -31,7 +32,7 @@ class CarInterface(CarInterfaceBase):
     ret.centerToFront = ret.wheelbase * 0.5
     ret.steerRatio = 14.3
     tire_stiffness_factor = 0.7933
-    set_lat_tune(ret.lateralTuning, LatTunes.PID_D)
+    #set_lat_tune(ret.lateralTuning, LatTunes.PID_D)
 
     ret.steerActuatorDelay = 0.1
     ret.lateralTuning.pid.kf = 0.000039
@@ -49,7 +50,7 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
-    ret.enableBsm = 0x3F6 in fingerprint[0] and candidate in TSS2_CAR
+    ret.enableBsm = 0x3F6 in fingerprint[0] #and candidate in TSS2_CAR
     # Detect smartDSU, which intercepts ACC_CMD from the DSU allowing openpilot to send it
     smartDsu = 0x2FF in fingerprint[0]
     # In TSS2 cars the camera does long control
@@ -57,13 +58,13 @@ class CarInterface(CarInterfaceBase):
     ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not smartDsu)
     ret.enableGasInterceptor = 0x201 in fingerprint[0]
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
-    ret.openpilotLongitudinalControl = smartDsu or ret.enableDsu or candidate in TSS2_CAR
+    ret.openpilotLongitudinalControl = True #smartDsu or ret.enableDsu or candidate in TSS2_CAR
 
     # min speed to enable ACC. if car can do stop and go, then set enabling speed
     # to a negative value, so it won't matter.
     ret.minEnableSpeed = -1. if (stop_and_go or ret.enableGasInterceptor) else MIN_ACC_SPEED
 
-    set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
+    #set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
     return ret
 
   # returns a car.CarState

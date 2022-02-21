@@ -41,98 +41,66 @@ addr_checks mitsubishi_rx_checks = {mitsubishi_addr_checks, MITSUBISHI_ADDR_CHEC
 // global actuation limit states
 int mitsubishi_dbc_eps_torque_factor = 100;   // conversion factor for STEER_TORQUE_EPS in %: see dbc file
 
-static uint8_t mitsubishi_compute_checksum(CAN_FIFOMailBox_TypeDef *to_push) {
-  int addr = GET_ADDR(to_push);
-  int len = GET_LEN(to_push);
-  uint8_t checksum = (uint8_t)(addr) + (uint8_t)((unsigned int)(addr) >> 8U) + (uint8_t)(len);
-  for (int i = 0; i < (len - 1); i++) {
-    checksum += (uint8_t)GET_BYTE(to_push, i);
-  }
-  return checksum;
-}
-
-static uint8_t mitsubishi_get_checksum(CAN_FIFOMailBox_TypeDef *to_push) {
-  int checksum_byte = GET_LEN(to_push) - 1;
-  return (uint8_t)(GET_BYTE(to_push, checksum_byte));
-}
+//static uint8_t mitsubishi_compute_checksum(CAN_FIFOMailBox_TypeDef *to_push) {
+//  int addr = GET_ADDR(to_push);
+//  int len = GET_LEN(to_push);
+//  uint8_t checksum = (uint8_t)(addr) + (uint8_t)((unsigned int)(addr) >> 8U) + (uint8_t)(len);
+//  for (int i = 0; i < (len - 1); i++) {
+//    checksum += (uint8_t)GET_BYTE(to_push, i);
+//  }
+//  return checksum;
+//}
+//
+//static uint8_t mitsubishi_get_checksum(CAN_FIFOMailBox_TypeDef *to_push) {
+//  int checksum_byte = GET_LEN(to_push) - 1;
+//  return (uint8_t)(GET_BYTE(to_push, checksum_byte));
+//}
 
 static int mitsubishi_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
-
-
-  return TRUE;
+  UNUSED(to_push);
+  return true;
 }
 
 static int mitsubishi_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
 
   int tx = 1;
-  int addr = GET_ADDR(to_send);
-  int bus = GET_BUS(to_send);
+//  int addr = GET_ADDR(to_send);
+//  int bus = GET_BUS(to_send);
 
   if (!msg_allowed(to_send, MITSUBISHI_TX_MSGS, sizeof(MITSUBISHI_TX_MSGS)/sizeof(MITSUBISHI_TX_MSGS[0]))) {
-    tx = 0;
+    //tx = 0;
   }
 
-  if (relay_malfunction) {
-    tx = 0;
-  }
-
-  // Check if msg is sent on BUS 0
-  if (bus == 0) {
-      // no torque if controls is not allowed
-      if (!controls_allowed && (desired_torque != 0)) {
-        violation = 1;
-      }
-
-      // reset to 0 if either controls is not allowed or there's a violation
-      if (violation || !controls_allowed) {
-        desired_torque_last = 0;
-        rt_torque_last = 0;
-        ts_last = ts;
-      }
-
-      if (violation) {
-        tx = 0;
-      }
-    }
-  }
+//  if (relay_malfunction) {
+//    tx = 0;
+//  }
 
   return tx;
 }
 
 static const addr_checks* mitsubishi_init(int16_t param) {
-  controls_allowed = 0;
+//  controls_allowed = 0;
+//  relay_malfunction_reset();
+//  gas_interceptor_detected = 0;
+//  mitsubishi_dbc_eps_torque_factor = param;
+//  return &mitsubishi_rx_checks;
+  UNUSED(param);
+  controls_allowed = false;
   relay_malfunction_reset();
-  gas_interceptor_detected = 0;
-  mitsubishi_dbc_eps_torque_factor = param;
-  return &mitsubishi_rx_checks;
+  return &default_rx_checks;
 }
 
 static int mitsubishi_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
+  UNUSED(to_fwd);
+  UNUSED(bus_num);
 
-  int bus_fwd = -1;
-  if (!relay_malfunction) {
-    if (bus_num == 0) {
-      bus_fwd = 2;
-    }
-    if (bus_num == 2) {
-      int addr = GET_ADDR(to_fwd);
-      // block stock lkas messages and stock acc messages (if OP is doing ACC)
-      // in TSS2, 0x191 is LTA which we need to block to avoid controls collision
-      int is_lkas_msg = ((addr == 0x2E4) || (addr == 0x412) || (addr == 0x191));
-      // in TSS2 the camera does ACC as well, so filter 0x343
-      int is_acc_msg = (addr == 0x343);
-      int block_msg = is_lkas_msg || is_acc_msg;
-      if (!block_msg) {
-        bus_fwd = 0;
-      }
-    }
-  }
-  return bus_fwd;
+  return 0;
 }
 
 const safety_hooks mitsubishi_hooks = {
   .init = mitsubishi_init,
   .rx = mitsubishi_rx_hook,
   .tx = mitsubishi_tx_hook,
+  .tx_lin = nooutput_tx_lin_hook,
   .fwd = mitsubishi_fwd_hook,
 };

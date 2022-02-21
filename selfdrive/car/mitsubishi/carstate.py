@@ -6,6 +6,7 @@ from opendbc.can.can_define import CANDefine
 from selfdrive.car.interfaces import CarStateBase
 from opendbc.can.parser import CANParser
 from selfdrive.config import Conversions as CV
+from selfdrive.car.mitsubishi.values import DBC
 
 
 class CarState(CarStateBase):
