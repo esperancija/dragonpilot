@@ -3,7 +3,8 @@ from cereal import car
 from selfdrive.config import Conversions as CV
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint, get_safety_config
 from selfdrive.car.interfaces import CarInterfaceBase
-from selfdrive.car.mitsubishi.values import MIN_ACC_SPEED
+from selfdrive.car.mitsubishi.values import MIN_ACC_SPEED, CarControllerParams
+from common.dp_common import common_interface_atl, common_interface_get_params_lqr
 
 EventName = car.CarEvent.EventName
 
@@ -14,12 +15,12 @@ class CarInterface(CarInterfaceBase):
     return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
 
   @staticmethod
-  def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value
+  def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value Here 2!!!
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
 
     ret.carName = "mitsubishi"
-    ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.mitsubishi)]
-    ret.safetyConfigs[0].safetyParam = 1 #EPS_SCALE[candidate]
+    #ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.mitsubishi)]
+    #ret.safetyConfigs[0].safetyParam = 1 #EPS_SCALE[candidate]
 
     ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4
@@ -68,31 +69,52 @@ class CarInterface(CarInterfaceBase):
     return ret
 
   # returns a car.CarState
-  def update(self, c, can_strings):
+  # returns a car.CarState
+  def update(self, c, can_strings, dragonconf):
     # ******************* do can recv *******************
-    self.cp.update_strings(can_strings)
-    self.cp_cam.update_strings(can_strings)
+    #self.cp.update_strings(can_strings)
+    #self.cp_cam.update_strings(can_strings)
 
     ret = self.CS.update(self.cp, self.cp_cam)
+    # dp
+    self.dragonconf = dragonconf
+    ret.cruiseState.enabled = common_interface_atl(ret, dragonconf.dpAtl)
+
+    # low speed re-write
+    if ret.cruiseState.enabled and dragonconf.dpToyotaCruiseOverride and ret.cruiseState.speed < dragonconf.dpToyotaCruiseOverrideAt * CV.KPH_TO_MS:
+      if dragonconf.dpToyotaCruiseOverrideVego:
+        if self.dp_cruise_speed == 0.:
+          ret.cruiseState.speed = self.dp_cruise_speed = max(dragonconf.dpToyotaCruiseOverrideSpeed * CV.KPH_TO_MS,
+                                                             ret.vEgo)
+        else:
+          ret.cruiseState.speed = self.dp_cruise_speed
+      else:
+        ret.cruiseState.speed = dragonconf.dpToyotaCruiseOverrideSpeed * CV.KPH_TO_MS
+    else:
+      self.dp_cruise_speed = 0.
 
     ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
 
+    # gear except P, R
+    # extra_gears = [GearShifter.neutral, GearShifter.eco, GearShifter.manumatic, GearShifter.drive, GearShifter.sport,
+    #                GearShifter.low, GearShifter.brake, GearShifter.unknown]
+
     # events
-    events = self.create_common_events(ret)
+    # events = self.create_common_events(ret, extra_gears)
+    #
+    # if self.CS.low_speed_lockout and self.CP.openpilotLongitudinalControl:
+    #   events.add(EventName.lowSpeedLockout)
+    # if ret.vEgo < self.CP.minEnableSpeed and self.CP.openpilotLongitudinalControl:
+    #   events.add(EventName.belowEngageSpeed)
+    #   if c.actuators.accel > 0.3:
+    #     # some margin on the actuator to not false trigger cancellation while stopping
+    #     events.add(EventName.speedTooLow)
+    #   if ret.vEgo < 0.001:
+    #     # while in standstill, send a user alert
+    #     events.add(EventName.manualRestart)
 
-    if self.CS.low_speed_lockout and self.CP.openpilotLongitudinalControl:
-      events.add(EventName.lowSpeedLockout)
-    if ret.vEgo < self.CP.minEnableSpeed and self.CP.openpilotLongitudinalControl:
-      events.add(EventName.belowEngageSpeed)
-      if c.actuators.accel > 0.3:
-        # some margin on the actuator to not false trigger cancellation while stopping
-        events.add(EventName.speedTooLow)
-      if ret.vEgo < 0.001:
-        # while in standstill, send a user alert
-        events.add(EventName.manualRestart)
-
-    ret.events = events.to_msg()
+    #ret.events = events.to_msg()
 
     self.CS.out = ret.as_reader()
     return self.CS.out

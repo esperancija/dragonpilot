@@ -38,15 +38,23 @@ class CarInterfaceBase():
 
     if CarState is not None:
       self.CS = CarState(CP)
-      self.cp = self.CS.get_can_parser(CP)
+      print("Car  state 1")
+      self.cp = self.CS.get_can_parser(CP) #could not find message
+      print("Car  state 2")
       self.cp_cam = self.CS.get_cam_can_parser(CP)
+      print("Car  state 3")
       self.cp_body = self.CS.get_body_can_parser(CP)
 
+    print("Before CC")
     self.CC = None
     if CarController is not None:
       self.CC = CarController(self.cp.dbc_name, CP, self.VM)
 
     self.dragonconf = None
+
+    print("Call CarInterfaceBase")
+    print (self.CC)
+    print (self.CS)
 
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed):
