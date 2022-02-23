@@ -14,7 +14,7 @@ from selfdrive.controls.lib.vehicle_model import VehicleModel
 GearShifter = car.CarState.GearShifter
 EventName = car.CarEvent.EventName
 
-# WARNING: this value was determined based on the model's training distribution, waiting for params to set safety model
+# WARNING: this value was determined based on the model's training distribution,
 #          model predictions above this speed can be unpredictable
 MAX_CTRL_SPEED = (V_CRUISE_MAX + 4) * CV.KPH_TO_MS  # 135 + 4 = 86 mph
 ACCEL_MAX = 2.0
@@ -38,23 +38,15 @@ class CarInterfaceBase():
 
     if CarState is not None:
       self.CS = CarState(CP)
-      print("Car  state 1")
-      self.cp = self.CS.get_can_parser(CP) #could not find message
-      print("Car  state 2")
+      self.cp = self.CS.get_can_parser(CP)
       self.cp_cam = self.CS.get_cam_can_parser(CP)
-      print("Car  state 3")
       self.cp_body = self.CS.get_body_can_parser(CP)
 
-    print("Before CC")
     self.CC = None
     if CarController is not None:
       self.CC = CarController(self.cp.dbc_name, CP, self.VM)
 
     self.dragonconf = None
-
-    print("Call CarInterfaceBase")
-    print (self.CC)
-    print (self.CS)
 
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed):
