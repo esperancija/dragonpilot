@@ -19,8 +19,8 @@ class CarInterface(CarInterfaceBase):
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
 
     ret.carName = "mitsubishi"
-    #ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.mitsubishi)]
-    #ret.safetyConfigs[0].safetyParam = 1 #EPS_SCALE[candidate]
+    ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.mitsubishi)]
+    #ret.safetyConfigs[0].safetyParam = 1 #EPS_SCALE[candidate] 0x399
 
     ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
     ret.steerLimitTimer = 0.4

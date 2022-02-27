@@ -26,7 +26,7 @@ const int MITSUBISHI_STANDSTILL_THRSLD = 100;  // 1kph
 const int MITSUBISHI_GAS_INTERCEPTOR_THRSLD = 845;
 #define MITSUBISHI_GET_INTERCEPTOR(msg) (((GET_BYTE((msg), 0) << 8) + GET_BYTE((msg), 1) + (GET_BYTE((msg), 2) << 8) + GET_BYTE((msg), 3)) / 2) // avg between 2 tracks
 
-const CanMsg MITSUBISHI_TX_MSGS[] = {{0x399, 0, 7}};  // interceptor
+const CanMsg MITSUBISHI_TX_MSGS[] = {{0x398, 0, 7}};  // interceptor
 
 AddrCheckStruct mitsubishi_addr_checks[] = {
   {.msg = {{ 0xaa, 0, 8, .check_checksum = false, .expected_timestep = 12000U}, { 0 }, { 0 }}},
@@ -85,7 +85,7 @@ static const addr_checks* mitsubishi_init(int16_t param) {
 //  mitsubishi_dbc_eps_torque_factor = param;
 //  return &mitsubishi_rx_checks;
   UNUSED(param);
-  controls_allowed = false;
+  controls_allowed = true;
   relay_malfunction_reset();
   return &default_rx_checks;
 }
