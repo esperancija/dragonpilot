@@ -72,7 +72,7 @@ class CarInterface(CarInterfaceBase):
   # returns a car.CarState
   def update(self, c, can_strings, dragonconf):
     # ******************* do can recv *******************
-    #self.cp.update_strings(can_strings)
+    self.cp.update_strings(can_strings)
     #self.cp_cam.update_strings(can_strings)
 
     ret = self.CS.update(self.cp, self.cp_cam)
@@ -93,7 +93,7 @@ class CarInterface(CarInterfaceBase):
     else:
       self.dp_cruise_speed = 0.
 
-    ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
+    ret.canValid = self.cp.can_valid #and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
 
     # gear except P, R
