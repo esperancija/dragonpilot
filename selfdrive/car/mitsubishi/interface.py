@@ -10,6 +10,11 @@ EventName = car.CarEvent.EventName
 
 
 class CarInterface(CarInterfaceBase):
+  def __init__(self, CP, CarController, CarState):
+    super().__init__(CP, CarController, CarState)
+
+    self.oldCruiseState = 0.
+
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed):
     return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
@@ -51,13 +56,6 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
-    ret.enableBsm = 0x3F6 in fingerprint[0] #and candidate in TSS2_CAR
-    # Detect smartDSU, which intercepts ACC_CMD from the DSU allowing openpilot to send it
-    smartDsu = 0x2FF in fingerprint[0]
-    # In TSS2 cars the camera does long control
-    found_ecus = [fw.ecu for fw in car_fw]
-    ret.enableDsu = (len(found_ecus) > 0) and (Ecu.dsu not in found_ecus) and (candidate not in NO_DSU_CAR) and (not smartDsu)
-    ret.enableGasInterceptor = 0x201 in fingerprint[0]
     # if the smartDSU is detected, openpilot can send ACC_CMD (and the smartDSU will block it from the DSU) or not (the DSU is "connected")
     ret.openpilotLongitudinalControl = True #smartDsu or ret.enableDsu or candidate in TSS2_CAR
 
@@ -71,6 +69,7 @@ class CarInterface(CarInterfaceBase):
   # returns a car.CarState
   # returns a car.CarState
   def update(self, c, can_strings, dragonconf):
+
     # ******************* do can recv *******************
     self.cp.update_strings(can_strings)
     #self.cp_cam.update_strings(can_strings)
@@ -78,7 +77,19 @@ class CarInterface(CarInterfaceBase):
     ret = self.CS.update(self.cp, self.cp_cam)
     # dp
     self.dragonconf = dragonconf
-    ret.cruiseState.enabled = common_interface_atl(ret, dragonconf.dpAtl)
+
+    events = self.create_common_events(ret, pcm_enable=self.CS.CP.pcmCruise)
+    #ret.cruiseState.enabled = True #common_interface_atl(ret, dragonconf.dpAtl)
+
+
+    if ((ret.cruiseState.enabled == 1) and (self.oldCruiseState != ret.cruiseState.enabled)):
+      events.add(EventName.buttonEnable)
+      #print("Try send enable event %d and %d" % (ret.cruiseState.enabled, self.oldCruiseState))
+
+    if ((ret.cruiseState.enabled == 0) and (self.oldCruiseState != ret.cruiseState.enabled)):
+      events.add(EventName.buttonCancel)
+
+    self.oldCruiseState = ret.cruiseState.enabled
 
     # low speed re-write
     if ret.cruiseState.enabled and dragonconf.dpToyotaCruiseOverride and ret.cruiseState.speed < dragonconf.dpToyotaCruiseOverrideAt * CV.KPH_TO_MS:
@@ -114,7 +125,7 @@ class CarInterface(CarInterfaceBase):
     #     # while in standstill, send a user alert
     #     events.add(EventName.manualRestart)
 
-    #ret.events = events.to_msg()
+    ret.events = events.to_msg()
 
     self.CS.out = ret.as_reader()
     return self.CS.out
@@ -123,11 +134,20 @@ class CarInterface(CarInterfaceBase):
   # to be called @ 100hz
   def apply(self, c):
     hud_control = c.hudControl
-    ret = self.CC.update(c.enabled, c.active, self.CS, self.frame,
+
+    # can_sends = self.CC.update(c.enabled, self.CS, self.frame,
+    #                            c.actuators, c.cruiseControl.cancel,
+    #                            c.hudControl.visualAlert, c.hudControl.leftLaneVisible,
+    #                            c.hudControl.rightLaneVisible, c.hudControl.leadVisible,
+    #                            c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart, self.dragonconf)
+    #ruiseState.available
+    print("interface.py 126 steer %d, isEna %s, isAct %s" % (c.actuators.steer, c.enabled, c.active))
+
+    ret = self.CC.update(c.enabled, self.CS, self.frame,
                          c.actuators, c.cruiseControl.cancel,
                          hud_control.visualAlert, hud_control.leftLaneVisible,
                          hud_control.rightLaneVisible, hud_control.leadVisible,
-                         hud_control.leftLaneDepart, hud_control.rightLaneDepart)
+                         hud_control.leftLaneDepart, hud_control.rightLaneDepart, self.dragonconf)
 
     self.frame += 1
     return ret

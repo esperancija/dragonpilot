@@ -38,12 +38,12 @@ class CarState(CarStateBase):
     ret.gas = cp.vl["GAS_PEDAL"]["GAS_PEDAL"]
     ret.gasPressed = ret.gas > 2
 
-    # ret.wheelSpeeds = self.get_wheel_speeds(
-    #   cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FL"],
-    #   cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FR"],
-    #   cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_RL"],
-    #   cp.vl["WHEEL_SPEEDS_2"]["WHEEL_SPEED_RR"],
-    # )
+    speed_factor = 1.
+    ret.wheelSpeeds.fl = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FL"] * CV.KPH_TO_MS * speed_factor
+    ret.wheelSpeeds.fr = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FR"] * CV.KPH_TO_MS * speed_factor
+    ret.wheelSpeeds.rl = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_RL"] * CV.KPH_TO_MS * speed_factor
+    ret.wheelSpeeds.rr = cp.vl["WHEEL_SPEEDS_2"]["WHEEL_SPEED_RR"] * CV.KPH_TO_MS * speed_factor
+
     ret.vEgoRaw = mean([ret.wheelSpeeds.fl, ret.wheelSpeeds.fr, ret.wheelSpeeds.rl, ret.wheelSpeeds.rr])
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
 
@@ -69,6 +69,7 @@ class CarState(CarStateBase):
     ret.cruiseState.speed = cp.vl["ACC_STATUS"]["SET_SPEED"] * CV.KPH_TO_MS
     ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ACTIVE"])
     ret.cruiseState.nonAdaptive = False#cp.vl["ACC_STATUS"]["CRUISE_STATE"] in (1, 2, 3, 4, 5, 6)
+    ret.cruiseActualEnabled = ret.cruiseState.enabled
 
     ret.cruiseState.standstill = False
 

@@ -14,6 +14,10 @@ class CarControllerParams:
   ACCEL_MAX = 1.5  # m/s2, lower than allowed 2.0 m/s2 for tuning reasons
   ACCEL_MIN = -3.5  # m/s2
 
+  STEER_DRIVER_ALLOWANCE = 50
+  STEER_DRIVER_MULTIPLIER = 4
+  STEER_DRIVER_FACTOR = 100
+
   STEER_MAX = 1500
   STEER_DELTA_UP = 10       # 1.5s time to peak torque
   STEER_DELTA_DOWN = 25     # always lower than 45 otherwise the Rav4 faults (Prius seems ok with 50)

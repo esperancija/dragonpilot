@@ -1,3 +1,4 @@
+
 from selfdrive.car import apply_std_steer_torque_limits
 from opendbc.can.packer import CANPacker
 from common.dp_common import common_controller_ctrl
@@ -17,32 +18,31 @@ class CarController():
     self.steer_rate_limited = False
     self.use_interceptor = False
     self.gone_fast_yet = False
-
+    self.apply_steer_last = 0
     self.packer = CANPacker(dbc_name)
 
-  def create_lkas_command(packer, apply_steer, moving_fast, frame):
-    # LKAS_COMMAND 0x292 (658) Lane-keeping signal to turn the wheel.
+  def create_lkas_command(self, apply_steer, moving_fast, frame):
     values = {
       "LKAS_STEERING_TORQUE": apply_steer,
       "LKAS_HIGH_TORQUE": int(moving_fast),
       "COUNTER": frame % 0x10,
     }
-    return packer.make_can_msg("LKAS_COMMAND", 0, values)
+    return self.packer.make_can_msg("LKAS_COMMAND", 0, values)
 
   def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, hud_alert,
                left_line, right_line, lead, left_lane_depart, right_lane_depart, dragonconf):
 
     can_sends = []
 
-    apply_steer = 1 #apply_toyota_steer_torque_limits(new_steer, self.apply_steer_last,
-                     #                              CS.out.steeringTorqueEps, CarControllerParams)
-
-
-    #new_msg = self.create_lkas_command(self.packer, int(apply_steer), self.gone_fast_yet, frame)
+    new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))
+    apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last,
+                                                   CS.out.steeringTorqueEps, CarControllerParams)
+    new_msg = self.create_lkas_command(int(apply_steer), self.gone_fast_yet, frame)
     #can_sends.append(self.packer.make_can_msg(921, b'\x00\x00\x00\x00\x00\x00\x00\x00', 0))
-    #can_sends.append(new_msg)
+    can_sends.append(new_msg)
 
-    can_sends.append((0x18DAB0F1, 0, b"\x02\x3E\x80\x00\x00\x00\x00\x00", 0))
+    self.apply_steer_last = apply_steer
+    #can_sends.append((0x18DAB0F1, 0, b"\x02\x3E\x80\x00\x00\x00\x00\x00", 0))
 
     # *** steering ***
 
