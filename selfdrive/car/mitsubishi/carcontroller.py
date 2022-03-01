@@ -21,10 +21,9 @@ class CarController():
     self.apply_steer_last = 0
     self.packer = CANPacker(dbc_name)
 
-  def create_lkas_command(self, apply_steer, moving_fast, frame):
+  def create_lkas_command(self, apply_steer, frame):
     values = {
       "LKAS_STEERING_TORQUE": apply_steer,
-      "LKAS_HIGH_TORQUE": int(moving_fast),
       "COUNTER": frame % 0x10,
     }
     return self.packer.make_can_msg("LKAS_COMMAND", 0, values)
@@ -34,10 +33,13 @@ class CarController():
 
     can_sends = []
 
-    new_steer = int(round(actuators.steer * CarControllerParams.STEER_MAX))
+    new_steer = int(round(actuators.steer * CarControllerParams.STEER_MOMENT_MAX))
+
     apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last,
                                                    CS.out.steeringTorqueEps, CarControllerParams)
-    new_msg = self.create_lkas_command(int(apply_steer), self.gone_fast_yet, frame)
+
+    #print ("new apply_steer %d %d" % (new_steer, apply_steer))
+    new_msg = self.create_lkas_command(int(apply_steer), frame)
     #can_sends.append(self.packer.make_can_msg(921, b'\x00\x00\x00\x00\x00\x00\x00\x00', 0))
     can_sends.append(new_msg)
 

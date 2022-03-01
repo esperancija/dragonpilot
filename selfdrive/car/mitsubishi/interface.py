@@ -141,7 +141,6 @@ class CarInterface(CarInterfaceBase):
     #                            c.hudControl.rightLaneVisible, c.hudControl.leadVisible,
     #                            c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart, self.dragonconf)
     #ruiseState.available
-    print("interface.py 126 steer %d, isEna %s, isAct %s" % (c.actuators.steer, c.enabled, c.active))
 
     ret = self.CC.update(c.enabled, self.CS, self.frame,
                          c.actuators, c.cruiseControl.cancel,
