@@ -38,18 +38,47 @@ class CarState(CarStateBase):
     ret.gas = cp.vl["GAS_PEDAL"]["GAS_PEDAL"]
     ret.gasPressed = ret.gas > 2
 
-    speed_factor = 1.
+
+    erpm = int(cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"])
+    erpm = ((erpm & 0xff) << 8) + ((erpm >> 8)  & 0xff)
+    ret.engineRPM  = erpm #cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"]
+
+
+
+    speed_factor = 0.1
     ret.wheelSpeeds.fl = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FL"] * CV.KPH_TO_MS * speed_factor
     ret.wheelSpeeds.fr = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FR"] * CV.KPH_TO_MS * speed_factor
     ret.wheelSpeeds.rl = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_RL"] * CV.KPH_TO_MS * speed_factor
     ret.wheelSpeeds.rr = cp.vl["WHEEL_SPEEDS_2"]["WHEEL_SPEED_RR"] * CV.KPH_TO_MS * speed_factor
+
+    #ret.wheelSpeeds.fl = ret.gas 
+    #ret.wheelSpeeds.fr = ret.gas 
+    #ret.wheelSpeeds.rl = ret.gas 
+    #ret.wheelSpeeds.rr = ret.gas 
+
 
     ret.vEgoRaw = mean([ret.wheelSpeeds.fl, ret.wheelSpeeds.fr, ret.wheelSpeeds.rl, ret.wheelSpeeds.rr])
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
 
     ret.standstill = ret.vEgoRaw < 10
 
-    ret.steeringAngleDeg = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"]
+    #ret.steeringAngleDeg = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
+    sta = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
+    #sta = (sta >> 8) | ((sta & 0xff) << 8)
+    sta = ((sta & 0xff) << 8) + ((sta >> 8)  & 0xff)
+    if (sta > 32768):
+      sta = sta - 65536
+
+    sta-=4096
+    sta /= 2
+    ret.steeringAngleDeg = sta
+
+    #stAH = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_H"]
+    #stAL = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_L"]
+    #ret.steeringAngleDeg  = stAL
+
+    #ret.steeringAngleDeg = (cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_L"] << 8) + (cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_H"]) 
+
     #ret.steeringRateDeg = cp.vl["STEER_ANGLE_SENSOR"]["STEER_RATE"]
 
     can_gear = int(cp.vl["GEARBOX"]["GEAR_SHIFTER"])
@@ -65,9 +94,13 @@ class CarState(CarStateBase):
     ret.steeringPressed = abs(ret.steeringTorque) > 1
     ret.steerWarning = False#0
 
+    #ret.cruiseState.available = cp.vl["ACC_STATUS"]["CRUISE_ON"] != 0
     ret.cruiseState.available = cp.vl["ACC_STATUS"]["CRUISE_ON"] != 0
+
     ret.cruiseState.speed = cp.vl["ACC_STATUS"]["SET_SPEED"] * CV.KPH_TO_MS
-    ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ACTIVE"])
+   #ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ACTIVE"])
+    ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ON"])
+
     ret.cruiseState.nonAdaptive = False#cp.vl["ACC_STATUS"]["CRUISE_STATE"] in (1, 2, 3, 4, 5, 6)
     ret.cruiseActualEnabled = ret.cruiseState.enabled
 
@@ -91,11 +124,15 @@ class CarState(CarStateBase):
       ("SEATBELT_DRIVER_UNLATCHED", "SEATBELT_STATUS", 0),
       ("BRAKE_PRESSED", "BRAKE_MODULE", 0),
       ("GAS_PEDAL", "GAS_PEDAL", 0),
+      ("ENGINE_RPM", "ENGINE_RPM_ID", 0),
+
       ("WHEEL_SPEED_FL", "WHEEL_SPEEDS_1", 0),
       ("WHEEL_SPEED_FR", "WHEEL_SPEEDS_1", 0),
       ("WHEEL_SPEED_RL", "WHEEL_SPEEDS_1", 0),
       ("WHEEL_SPEED_RR", "WHEEL_SPEEDS_2", 0),
       ("STEER_ANGLE", "STEER_ANGLE_SENSOR", 0),
+      #("STEER_ANGLE_L", "STEER_ANGLE_SENSOR", 0),
+
       ("GEAR_SHIFTER", "GEARBOX", 0),
       ("TURN_LEFT_SIGNAL", "WARNING_SIGNALS", 0),
       ("TURN_RIGHT_SIGNAL", "WARNING_SIGNALS", 0),
