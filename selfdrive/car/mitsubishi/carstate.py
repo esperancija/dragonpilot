@@ -26,6 +26,15 @@ class CarState(CarStateBase):
     self.low_speed_lockout = False
     self.acc_type = 1
 
+  def swapBytesSigned(self, data):
+    ret = ((data & 0xff) << 8) + ((data >> 8)  & 0xff)
+    if (ret > 32768):
+      ret = ret - 65536
+    return ret
+
+  def swapBytesUnsigned(self, data):
+    return ((data & 0xff) << 8) + ((data >> 8)  & 0xff)
+
   def update(self, cp, cp_cam):
     ret = car.CarState.new_message()
 
@@ -39,17 +48,16 @@ class CarState(CarStateBase):
     ret.gasPressed = ret.gas > 2
 
 
-    erpm = int(cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"])
-    erpm = ((erpm & 0xff) << 8) + ((erpm >> 8)  & 0xff)
-    ret.engineRPM  = erpm #cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"]
+    # erpm = int(cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"])
+    # erpm = ((erpm & 0xff) << 8) + ((erpm >> 8)  & 0xff)
+    ret.engineRPM  = self.swapBytesUnsigned(int(cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"])) #cp.vl["ENGINE_RPM_ID"]["ENGINE_RPM"]
 
 
-
-    speed_factor = 0.1
-    ret.wheelSpeeds.fl = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FL"] * CV.KPH_TO_MS * speed_factor
-    ret.wheelSpeeds.fr = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FR"] * CV.KPH_TO_MS * speed_factor
-    ret.wheelSpeeds.rl = cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_RL"] * CV.KPH_TO_MS * speed_factor
-    ret.wheelSpeeds.rr = cp.vl["WHEEL_SPEEDS_2"]["WHEEL_SPEED_RR"] * CV.KPH_TO_MS * speed_factor
+    speed_factor = 0.3/4
+    ret.wheelSpeeds.fl = self.swapBytesUnsigned(int(cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FL"])) * CV.KPH_TO_MS * speed_factor
+    ret.wheelSpeeds.fr = self.swapBytesUnsigned(int(cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_FR"])) * CV.KPH_TO_MS * speed_factor
+    ret.wheelSpeeds.rl = self.swapBytesUnsigned(int(cp.vl["WHEEL_SPEEDS_1"]["WHEEL_SPEED_RL"])) * CV.KPH_TO_MS * speed_factor
+    ret.wheelSpeeds.rr = self.swapBytesUnsigned(int(cp.vl["WHEEL_SPEEDS_2"]["WHEEL_SPEED_RR"])) * CV.KPH_TO_MS * speed_factor
 
     #ret.wheelSpeeds.fl = ret.gas 
     #ret.wheelSpeeds.fr = ret.gas 
@@ -63,12 +71,9 @@ class CarState(CarStateBase):
     ret.standstill = ret.vEgoRaw < 10
 
     #ret.steeringAngleDeg = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
-    sta = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
+    #sta = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
     #sta = (sta >> 8) | ((sta & 0xff) << 8)
-    sta = ((sta & 0xff) << 8) + ((sta >> 8)  & 0xff)
-    if (sta > 32768):
-      sta = sta - 65536
-
+    sta = self.swapBytesSigned(int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"]))
     sta-=4096
     sta /= 2
     ret.steeringAngleDeg = sta
@@ -94,12 +99,14 @@ class CarState(CarStateBase):
     ret.steeringPressed = abs(ret.steeringTorque) > 1
     ret.steerWarning = False#0
 
-    #ret.cruiseState.available = cp.vl["ACC_STATUS"]["CRUISE_ON"] != 0
     ret.cruiseState.available = cp.vl["ACC_STATUS"]["CRUISE_ON"] != 0
+    #ret.cruiseState.available = True #bool(cp.vl["ECO_BUT_ID"]["ECO_MODE"])
 
     ret.cruiseState.speed = cp.vl["ACC_STATUS"]["SET_SPEED"] * CV.KPH_TO_MS
-   #ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ACTIVE"])
+    
+    #ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ACTIVE"])
     ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ON"])
+    #ret.cruiseState.enabled = bool(cp.vl["ECO_BUT_ID"]["ECO_MODE"])
 
     ret.cruiseState.nonAdaptive = False#cp.vl["ACC_STATUS"]["CRUISE_STATE"] in (1, 2, 3, 4, 5, 6)
     ret.cruiseActualEnabled = ret.cruiseState.enabled
@@ -132,6 +139,8 @@ class CarState(CarStateBase):
       ("WHEEL_SPEED_RR", "WHEEL_SPEEDS_2", 0),
       ("STEER_ANGLE", "STEER_ANGLE_SENSOR", 0),
       #("STEER_ANGLE_L", "STEER_ANGLE_SENSOR", 0),
+
+      ("ECO_MODE", "ECO_BUT_ID", 0),
 
       ("GEAR_SHIFTER", "GEARBOX", 0),
       ("TURN_LEFT_SIGNAL", "WARNING_SIGNALS", 0),

@@ -24,11 +24,21 @@ class CarInterface(CarInterfaceBase):
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
 
     ret.carName = "mitsubishi"
+    ret.radarOffCan = True
+    ret.lateralTuning.init('pid')
+
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.mitsubishi)]
     #ret.safetyConfigs[0].safetyParam = 1 #EPS_SCALE[candidate] 0x399
 
-    ret.steerActuatorDelay = 0.12  # Default delay, Prius has larger delay
+    ret.steerActuatorDelay = 0.1
     ret.steerLimitTimer = 0.4
+    ret.steerRateCost = 0.7
+    ret.steerRatio = 14.3
+
+    ret.lateralTuning.pid.kf = 0.000039
+    ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0., 10., 20.], [0., 10., 20.]]
+    ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.01, 0.05, 0.2], [0.003, 0.018, 0.025]]
+
     ret.stoppingControl = False  # Toyota starts braking more when it thinks you want to stop
 
     stop_and_go = False
@@ -36,16 +46,10 @@ class CarInterface(CarInterfaceBase):
     ret.mass = 1800 + STD_CARGO_KG
     ret.wheelbase = 2.68986
     ret.centerToFront = ret.wheelbase * 0.5
-    ret.steerRatio = 14.3
+
     tire_stiffness_factor = 0.7933
     #set_lat_tune(ret.lateralTuning, LatTunes.PID_D)
 
-    ret.steerActuatorDelay = 0.1
-    ret.lateralTuning.pid.kf = 0.000039
-    ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0., 10., 20.], [0., 10., 20.]]
-    ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.01, 0.05, 0.2], [0.003, 0.018, 0.025]]
-
-    ret.steerRateCost = 1.
 
     # TODO: get actual value, for now starting with reasonable value for
     # civic and scaling by mass and wheelbase
@@ -62,6 +66,9 @@ class CarInterface(CarInterfaceBase):
     # min speed to enable ACC. if car can do stop and go, then set enabling speed
     # to a negative value, so it won't matter.
     ret.minEnableSpeed = -1. if (stop_and_go or ret.enableGasInterceptor) else MIN_ACC_SPEED
+
+    # dp
+    ret = common_interface_get_params_lqr(ret)
 
     #set_long_tune(ret.longitudinalTuning, LongTunes.PEDAL)
     return ret
