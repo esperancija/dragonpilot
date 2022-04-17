@@ -64,10 +64,10 @@ static int mitsubishi_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
 static int mitsubishi_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
 
   int tx = 0;
-//  int addr = GET_ADDR(to_send);
+  int addr = GET_ADDR(to_send);
 //  int bus = GET_BUS(to_send);
 
-   if (to_send->addr == 0x3b6)
+   if (addr == 0x3b6)
        tx = 1;
 
 //  if (relay_malfunction) {
