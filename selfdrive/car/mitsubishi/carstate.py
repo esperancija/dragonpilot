@@ -70,21 +70,12 @@ class CarState(CarStateBase):
 
     ret.standstill = ret.vEgoRaw < 10
 
-    #ret.steeringAngleDeg = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
-    #sta = int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"])
-    #sta = (sta >> 8) | ((sta & 0xff) << 8)
     sta = self.swapBytesSigned(int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE"]))
     sta-=4096
     sta /= 2
     ret.steeringAngleDeg = sta
 
-    #stAH = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_H"]
-    #stAL = cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_L"]
-    #ret.steeringAngleDeg  = stAL
-
-    #ret.steeringAngleDeg = (cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_L"] << 8) + (cp.vl["STEER_ANGLE_SENSOR"]["STEER_ANGLE_H"]) 
-
-    #ret.steeringRateDeg = cp.vl["STEER_ANGLE_SENSOR"]["STEER_RATE"]
+    ret.steeringRateDeg = self.swapBytesSigned(int(cp.vl["STEER_ANGLE_SENSOR"]["STEER_RATE"]))
 
     can_gear = int(cp.vl["GEARBOX"]["GEAR_SHIFTER"])
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(can_gear, None))
@@ -95,26 +86,25 @@ class CarState(CarStateBase):
 
     ret.steeringTorque = cp.vl["STEER_MOMENT_SENSOR"]["STEER_MOMENT"]
     ret.steeringTorqueEps = cp.vl["STEER_MOMENT_SENSOR"]["STEER_MOMENT_EPS"]
+
+    ret.steeringTorqueEps *= ret.steeringTorque
     # we could use the override bit from dbc, but it's triggered at too high torque values
-    ret.steeringPressed = abs(ret.steeringTorque) > 1
+    ret.steeringPressed = abs(ret.steeringTorque) > 2
     ret.steerWarning = False#0
 
-    ret.cruiseState.available = cp.vl["ACC_STATUS"]["CRUISE_ON"] != 0
-    #ret.cruiseState.available = True #bool(cp.vl["ECO_BUT_ID"]["ECO_MODE"])
-
     ret.cruiseState.speed = cp.vl["ACC_STATUS"]["SET_SPEED"] * CV.KPH_TO_MS
-    
+    #ret.cruiseState.available = cp.vl["ACC_STATUS"]["CRUISE_ON"] != 0
     #ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ACTIVE"])
-    ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ON"])
-    #ret.cruiseState.enabled = bool(cp.vl["ECO_BUT_ID"]["ECO_MODE"])
+    #ret.cruiseState.enabled = bool(cp.vl["ACC_STATUS"]["CRUISE_ON"])
+
+    ret.cruiseState.enabled = bool(cp.vl["JOYSTICK_COMMAND"]["OP_ON"])
+    ret.cruiseState.available = bool(cp.vl["JOYSTICK_COMMAND"]["OP_ON"])
 
     ret.cruiseState.nonAdaptive = False#cp.vl["ACC_STATUS"]["CRUISE_STATE"] in (1, 2, 3, 4, 5, 6)
     ret.cruiseActualEnabled = ret.cruiseState.enabled
 
     ret.cruiseState.standstill = False
 
-    #ret.stockAeb = bool(cp_cam.vl["PRE_COLLISION"]["PRECOLLISION_ACTIVE"] and cp_cam.vl["PRE_COLLISION"]["FORCE"] < -1e-5)
-    #ret.espDisabled = cp.vl["ESP_CONTROL"]["TC_DISABLED"] != 0
     ret.leftBlindspot = bool(cp.vl["BSW_STATUS"]["LEFT_WARNING"])
     ret.rightBlindspot = bool(cp.vl["BSW_STATUS"]["RIGHT_WARNING"])
 
@@ -138,7 +128,7 @@ class CarState(CarStateBase):
       ("WHEEL_SPEED_RL", "WHEEL_SPEEDS_1", 0),
       ("WHEEL_SPEED_RR", "WHEEL_SPEEDS_2", 0),
       ("STEER_ANGLE", "STEER_ANGLE_SENSOR", 0),
-      #("STEER_ANGLE_L", "STEER_ANGLE_SENSOR", 0),
+      ("STEER_RATE", "STEER_ANGLE_SENSOR", 0),
 
       ("ECO_MODE", "ECO_BUT_ID", 0),
 
@@ -152,6 +142,9 @@ class CarState(CarStateBase):
       ("SET_SPEED", "ACC_STATUS", 0),
       ("LEFT_WARNING", "BSW_STATUS", 0),
       ("RIGHT_WARNING", "BSW_STATUS", 0),
+
+      #("TEST_DATA", "JOYSTICK_COMMAND", 0),
+      ("OP_ON", "JOYSTICK_COMMAND", 0),
     ]
 
     checks = [
@@ -167,5 +160,6 @@ class CarState(CarStateBase):
       ("STEER_MOMENT_SENSOR", 1),
       ("ACC_STATUS", 1),
       ("BSW_STATUS", 1),
+      ("JOYSTICK_COMMAND", 1),
     ]
     return CANParser(DBC[CP.carFingerprint]["pt"], signals, checks, 0)

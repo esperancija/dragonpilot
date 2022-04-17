@@ -98,39 +98,8 @@ class CarInterface(CarInterfaceBase):
 
     self.oldCruiseState = ret.cruiseState.enabled
 
-    # low speed re-write
-    if ret.cruiseState.enabled and dragonconf.dpToyotaCruiseOverride and ret.cruiseState.speed < dragonconf.dpToyotaCruiseOverrideAt * CV.KPH_TO_MS:
-      if dragonconf.dpToyotaCruiseOverrideVego:
-        if self.dp_cruise_speed == 0.:
-          ret.cruiseState.speed = self.dp_cruise_speed = max(dragonconf.dpToyotaCruiseOverrideSpeed * CV.KPH_TO_MS,
-                                                             ret.vEgo)
-        else:
-          ret.cruiseState.speed = self.dp_cruise_speed
-      else:
-        ret.cruiseState.speed = dragonconf.dpToyotaCruiseOverrideSpeed * CV.KPH_TO_MS
-    else:
-      self.dp_cruise_speed = 0.
-
     ret.canValid = self.cp.can_valid #and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
-
-    # gear except P, R
-    # extra_gears = [GearShifter.neutral, GearShifter.eco, GearShifter.manumatic, GearShifter.drive, GearShifter.sport,
-    #                GearShifter.low, GearShifter.brake, GearShifter.unknown]
-
-    # events
-    # events = self.create_common_events(ret, extra_gears)
-    #
-    # if self.CS.low_speed_lockout and self.CP.openpilotLongitudinalControl:
-    #   events.add(EventName.lowSpeedLockout)
-    # if ret.vEgo < self.CP.minEnableSpeed and self.CP.openpilotLongitudinalControl:
-    #   events.add(EventName.belowEngageSpeed)
-    #   if c.actuators.accel > 0.3:
-    #     # some margin on the actuator to not false trigger cancellation while stopping
-    #     events.add(EventName.speedTooLow)
-    #   if ret.vEgo < 0.001:
-    #     # while in standstill, send a user alert
-    #     events.add(EventName.manualRestart)
 
     ret.events = events.to_msg()
 

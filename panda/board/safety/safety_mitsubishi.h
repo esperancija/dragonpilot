@@ -63,13 +63,12 @@ static int mitsubishi_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
 
 static int mitsubishi_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
 
-  int tx = 1;
+  int tx = 0;
 //  int addr = GET_ADDR(to_send);
 //  int bus = GET_BUS(to_send);
 
-  if (!msg_allowed(to_send, MITSUBISHI_TX_MSGS, sizeof(MITSUBISHI_TX_MSGS)/sizeof(MITSUBISHI_TX_MSGS[0]))) {
-    //tx = 0;
-  }
+   if (to_send->addr == 0x3b6)
+       tx = 1;
 
 //  if (relay_malfunction) {
 //    tx = 0;
